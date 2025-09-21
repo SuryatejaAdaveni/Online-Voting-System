@@ -9,13 +9,7 @@ const otpGenerator = require("otp-generator");
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
-
-// Face descriptor logic
-const faceapi = require("@vladmandic/face-api");
-const canvas = require("canvas");
 const { log } = require("console");
-const { Canvas, Image, ImageData } = canvas;
-faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
 
 dotenv.config();
 
@@ -27,21 +21,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.GMAIL_PASS,
   },
 });
-
-// Load models once
-let modelsLoaded = false;
-async function ensureModels() {
-  if (!modelsLoaded) {
-    console.log("Loading face-api.js models...");
-    const MODEL_PATH = path.resolve(__dirname, "../face-api-models");
-    await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODEL_PATH);
-    await faceapi.nets.faceRecognitionNet.loadFromDisk(MODEL_PATH);
-    await faceapi.nets.faceLandmark68Net.loadFromDisk(MODEL_PATH);
-    modelsLoaded = true;
-    console.log("Face-api.js models loaded successfully.");
-  }
-}
-ensureModels();
 
 /* -------------------- MOBILE OTP -------------------- */
 const sendMobileOtp = async (req, res) => {
@@ -241,23 +220,6 @@ const handleRegister = async (req, res) => {
         .json({ success: false, message: "Aadhaar already registered" });
     }
 
-    // Face detection
-    const photoBuffer = fs.readFileSync(photoPath);
-    const img = await canvas.loadImage(photoBuffer);
-
-    const detection = await faceapi
-      .detectSingleFace(img)
-      .withFaceLandmarks()
-      .withFaceDescriptor();
-
-    if (!detection) {
-      fs.unlinkSync(photoPath);
-      return res
-        .status(400)
-        .json({ success: false, message: "No face detected in the photo" });
-    }
-
-    const faceDescriptor = Array.from(detection.descriptor);
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await Voter.create({
@@ -272,9 +234,7 @@ const handleRegister = async (req, res) => {
       aadhaar,
       mobile,
       photo: photoPath,
-      faceDescriptor,
     });
-    // console.log("New user registered:", newUser);
 
     res.status(201).json({
       success: true,
@@ -302,22 +262,18 @@ const handleLogin = async (req, res) => {
     let user;
     if (role === "admin") {
       if (!email) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Email is required for admin login",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Email is required for admin login",
+        });
       }
       user = await Voter.findOne({ email, role: "admin" });
     } else {
       if (!voterId) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Voter ID is required for voter login",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Voter ID is required for voter login",
+        });
       }
       user = await Voter.findOne({ voterId, role: "voter" });
     }

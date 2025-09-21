@@ -4,6 +4,7 @@ import { FiPlus, FiUsers, FiList, FiUpload, FiX } from "react-icons/fi";
 import Webcam from "react-webcam";
 import "../styles/candidates.css";
 import apiUrl from "../apiUrl";
+import VoiceNavigator from "../components/VoiceNavigator"; // Import the VoiceNavigator component
 
 const Candidates = () => {
   const [candidates, setCandidates] = useState([]);
@@ -173,12 +174,12 @@ const Candidates = () => {
     setVerificationMessage("Verifying face...");
 
     try {
-      const response = await fetch(`${apiUrl}/api/verify-face`, {
+      const response = await fetch(`http://localhost:5000/api/verify-face`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           voterId: userData._id,
-          image: capturedImage,
+          image: capturedImage, // the base64 image from webcam
         }),
       });
 

@@ -16,7 +16,7 @@
   --font-main: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-•⁠  ⁠{
+•⁠ ⁠ {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -413,7 +413,7 @@ body {
 
 .bar-content {
   position: absolute;
-  right: 10px;
+  right: -350px;
   top: 50%;
   transform: translateY(-50%);
   color: white;

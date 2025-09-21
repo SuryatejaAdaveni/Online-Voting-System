@@ -1,7 +1,13 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { getElectionResults } = require('../controllers/resultController');
+const {
+  getElectionResults,
+  getHistoricalResults,
+  getRegionalResults,
+} = require("../controllers/resultController");
 
-router.get('/', getElectionResults);
+router.get("/", getElectionResults);
+router.get("/historical", getHistoricalResults);
+router.get("/regional", getRegionalResults);
 
 module.exports = router;

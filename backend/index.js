@@ -31,14 +31,17 @@ const candidateRouter = require("./routes/candidate");
 const voteRouter = require("./routes/vote");
 const resultRouter = require("./routes/result");
 const electionsRouter = require("./routes/elections");
-const faceVerifyRouter = require("./routes/faceVerify");
+const faceVerificationRouter = require("./routes/faceVerification");
+// In your backend main file
+const resultsRouter = require("./routes/result"); // assuming your route file
 
+app.use("/api/results", resultsRouter);
+app.use("/api", faceVerificationRouter);
 app.use("/voter", voterRouter);
 app.use("/api/candidates", candidateRouter());
 app.use("/api/votes", voteRouter);
 app.use("/api/results", resultRouter);
 app.use("/api/elections", electionsRouter);
-app.use("/api/verify-face", faceVerifyRouter);
 
 // Health check
 app.get("/health", (req, res) => {

@@ -45,6 +45,8 @@ router.post("/verify-email", verifyEmail);
 router.post("/send-mobile-otp", sendMobileOtp);
 router.post("/verify-mobile-otp", verifyMobileOtp);
 
+const { verifyFace } = require("../controllers/verifyFace");
 
+router.post("/verify-face", verifyFace);
 
 module.exports = router;

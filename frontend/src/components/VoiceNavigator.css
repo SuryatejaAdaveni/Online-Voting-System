@@ -1,0 +1,37 @@
+.voice-navigator-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 28px;
+  background: linear-gradient(135deg, #0297fa 0%, #58faac 100%);
+  border-radius: 50%;
+  width: 58px;
+  height: 58px;
+  box-shadow: 0 6px 20px rgba(50, 70, 200, 0.13);
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9999;
+  transition: background 0.3s, box-shadow 0.2s;
+  font-size: 2rem;
+}
+
+.voice-navigator-fab.listening {
+  background: linear-gradient(135deg, #f44336 0%, #ffc400 100%);
+  box-shadow: 0 3px 19px rgba(250, 80, 10, 0.15);
+  animation: micPulse 1.05s infinite;
+}
+
+@keyframes micPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.32);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(244, 67, 54, 0.08);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.1);
+  }
+}
