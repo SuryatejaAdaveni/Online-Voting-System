@@ -35,4 +35,4 @@ const castVote = async (req, res) => {
   }
 };
 
-module.exports =  castVote ;
+module.exports = castVote;

@@ -1,33 +1,61 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import VoiceNavigator from "./components/VoiceNavigator";
+import Candidates from "./pages/Candidates";
 import { toast } from "react-toastify";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import "./App.css";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Results from "./pages/Results";
-import Candidates from "./pages/Candidates";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
-import Navbar from "./components/Navbar";
-// import Error from "./pages/ErrorPage";
-// import AdminDashboard from "./pages/AdminDashboard";
-import Footer from "./components/Footer";
 import Logout from "./pages/Logout";
 import ProfilePage from "./pages/ProfilePage";
-import VoiceNavigator from "./components/VoiceNavigator"; // Import the VoiceNavigator component
+// import Error from "./pages/ErrorPage";
 
 const App = () => {
+  const candidatesRef = useRef();
+  const capturePhotoRef = useRef();
+  const verifyVoteRef = useRef();
+
+  const [candidates, setCandidates] = useState([]);
+  const [userData, setUserData] = useState(
+    JSON.parse(localStorage.getItem("userData")) || { role: "voter" }
+  );
+  const [loadingVote, setLoadingVote] = useState(false);
+  const [votedCandidateId, setVotedCandidateId] = useState(null);
+
+  const fetchCandidates = useCallback(async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/candidates/getCandidates"
+      );
+      const data = await response.json();
+      if (data.candidates) setCandidates(data.candidates);
+    } catch {
+      toast.error("Failed to load candidates");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userData._id) {
+      const votedId = localStorage.getItem(`votedCandidateId_${userData._id}`);
+      if (votedId) setVotedCandidateId(votedId);
+    }
+    if (userData.role === "voter") fetchCandidates();
+  }, [userData._id, userData.role, fetchCandidates]);
+
+  // Full voice command handler including navigation and voting
   const handleVoiceCommand = (command) => {
     const lower = command.toLowerCase().trim();
 
     console.log("[Voice command received]", command);
 
-    // Handle vote for party command first
     if (lower.startsWith("vote ")) {
       const partyName = lower.slice("vote ".length).trim();
-      handleVoiceVote(partyName);
-      return; // stop further checks
+      handleVoteByParty(partyName);
+      return;
     }
 
     if (lower.includes("go to home") || lower.includes("home page")) {
@@ -82,82 +110,92 @@ const App = () => {
       toast.error("Voice command not recognized.");
     }
   };
-  const [candidates, setCandidates] = useState([]);
 
-  // Fetch candidates from backend API
-  useEffect(() => {
-    const fetchCandidates = async () => {
-      try {
-        const response = await fetch("/api/candidates"); // make sure route calls getCandidates controller
-        const data = await response.json();
-        if (data.candidates) {
-          setCandidates(data.candidates);
-        }
-      } catch (error) {
-        toast.error("Failed to load candidates");
-      }
-    };
-    fetchCandidates();
-  }, []);
-
-  // Vote for candidate by voice using party name
-  const handleVoiceVote = (spokenParty) => {
-    if (!spokenParty) return;
-
-    const found = candidates.find(
+  // Vote by party name
+  const handleVoteByParty = (partyName) => {
+    if (!candidatesRef.current) return;
+    const candidate = candidatesRef.current.find(
       (c) =>
         c.party.toLowerCase().replace(/\s+/g, "") ===
-        spokenParty.toLowerCase().replace(/\s+/g, "")
+        partyName.toLowerCase().replace(/\s+/g, "")
     );
-
-    if (found) {
-      voteForCandidate(found._id);
+    if (candidate) {
+      voteForCandidate(candidate._id);
     } else {
-      toast.error(`Party named "${spokenParty}" not found`);
+      toast.error(`Party named "${partyName}" not found`);
     }
   };
 
-  // Example vote candidate function, replace with your API call
+  // API call to vote for candidate
   const voteForCandidate = async (candidateId) => {
+    setLoadingVote(true);
     try {
-      const response = await fetch("/api/votes/vote", {
+      const response = await fetch("http://localhost:3000/api/votes/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidateId }),
+        body: JSON.stringify({ candidateId, voterId: userData._id }),
       });
-
-      if (!response.ok) {
-        throw new Error("Vote submission failed");
-      }
-
       const data = await response.json();
-
-      toast.success(data.message || "Vote cast successfully!");
-    } catch (error) {
-      toast.error(error.message || "Failed to cast vote");
+      if (response.ok) {
+        toast.success(data.message || "Vote cast successfully!");
+        setVotedCandidateId(candidateId);
+        localStorage.setItem(`votedCandidateId_${userData._id}`, candidateId);
+      } else {
+        toast.error(data.message || "Failed to cast vote.");
+      }
+    } catch {
+      toast.error("An error occurred while voting.");
     }
+    setLoadingVote(false);
+  };
+
+  // Trigger capture photo in candidates component
+  const handleCapturePhoto = () => {
+    if (capturePhotoRef.current) capturePhotoRef.current();
+  };
+
+  // Trigger verify & vote in candidates component
+  const handleVerifyAndVote = () => {
+    if (verifyVoteRef.current) verifyVoteRef.current();
   };
 
   return (
-    <>
-      <BrowserRouter>
-        <VoiceNavigator onCommand={handleVoiceCommand} />
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/results" element={<Results />} />
-          <Route path="/candidates" element={<Candidates />} />
-          {/* <Route path="/admin-dashboard" element={<AdminDashboard />} /> */}
-          <Route path="/register" element={<Register />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/logout" element={<Logout />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="*" element={<Error />} />
-        </Routes>
-        <Footer />
-      </BrowserRouter>
-    </>
+    <BrowserRouter>
+      <VoiceNavigator
+        onCommand={handleVoiceCommand}
+        onVote={handleVoteByParty}
+        onCapture={handleCapturePhoto}
+        onVerifyVote={handleVerifyAndVote}
+      />
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/results" element={<Results />} />
+        <Route
+          path="/candidates"
+          element={
+            <Candidates
+              ref={candidatesRef}
+              setCandidates={setCandidates}
+              capturePhotoRef={capturePhotoRef}
+              verifyVoteRef={verifyVoteRef}
+              loadingVote={loadingVote}
+              votedCandidateId={votedCandidateId}
+              voteForCandidate={voteForCandidate}
+              userData={userData}
+              setUserData={setUserData}
+            />
+          }
+        />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/logout" element={<Logout />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        {/* <Route path="*" element={<Error />} /> */}
+      </Routes>
+      <Footer />
+    </BrowserRouter>
   );
 };
 

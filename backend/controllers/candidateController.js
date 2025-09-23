@@ -24,7 +24,7 @@ exports.addCandidate = async (req, res) => {
     }
 
     const photoPath = `/uploads/candidates/${req.files.photoUrl[0].filename}`;
-    const symbolPath = `/uploads/candidates/${req.files.partySymbolUrl.filename}`;
+    const symbolPath = `/uploads/candidates/${req.files.partySymbolUrl[0].filename}`;
 
     const candidate = new Candidate({
       name,

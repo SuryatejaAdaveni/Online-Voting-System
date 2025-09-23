@@ -1,7 +1,7 @@
 /* Container */
 .candidate-container {
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 60px auto;
   padding: 15px;
 }
 .candidate-container h2 {

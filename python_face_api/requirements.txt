@@ -1,0 +1,8 @@
+Flask
+flask-cors
+face_recognition
+numpy
+Pillow
+requests
+pymongo
+setuptools<81

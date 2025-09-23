@@ -10,6 +10,8 @@ const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 const { log } = require("console");
+const cloudinary = require("../cloudinaryConfig"); // import your cloudinary config
+const streamifier = require("streamifier"); // to convert buffer to stream
 
 dotenv.config();
 
@@ -168,7 +170,8 @@ const handleRegister = async (req, res) => {
     mobile,
   } = req.body;
 
-  const photoPath = req.file ? req.file.path : null;
+  // multer memoryStorage gives file buffer here
+  const photoBuffer = req.file ? req.file.buffer : null;
 
   try {
     if (
@@ -182,9 +185,8 @@ const handleRegister = async (req, res) => {
       !dob ||
       !aadhaar ||
       !mobile ||
-      !photoPath
+      !photoBuffer
     ) {
-      if (photoPath) fs.unlinkSync(photoPath);
       return res.status(400).json({
         success: false,
         message: "All required fields must be provided",
@@ -193,32 +195,44 @@ const handleRegister = async (req, res) => {
 
     // Duplicate checks
     if (await Voter.findOne({ email })) {
-      if (photoPath) fs.unlinkSync(photoPath);
       return res
         .status(400)
         .json({ success: false, message: "Email already registered" });
     }
 
     if (await Voter.findOne({ mobile })) {
-      if (photoPath) fs.unlinkSync(photoPath);
       return res
         .status(400)
         .json({ success: false, message: "Mobile number already registered" });
     }
 
     if (await Voter.findOne({ voterId })) {
-      if (photoPath) fs.unlinkSync(photoPath);
       return res
         .status(400)
         .json({ success: false, message: "Voter ID already registered" });
     }
 
     if (await Voter.findOne({ aadhaar })) {
-      if (photoPath) fs.unlinkSync(photoPath);
       return res
         .status(400)
         .json({ success: false, message: "Aadhaar already registered" });
     }
+
+    // Upload photo to Cloudinary
+    const uploadFromBuffer = (buffer) => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { public_id: voterId, folder: "voters" },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result.secure_url);
+          }
+        );
+        streamifier.createReadStream(buffer).pipe(uploadStream);
+      });
+    };
+
+    const photoUrl = await uploadFromBuffer(photoBuffer);
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -233,7 +247,7 @@ const handleRegister = async (req, res) => {
       dob,
       aadhaar,
       mobile,
-      photo: photoPath,
+      photo: photoUrl, // save Cloudinary URL here
     });
 
     res.status(201).json({
@@ -243,7 +257,7 @@ const handleRegister = async (req, res) => {
     });
   } catch (error) {
     console.error("Registration error:", error);
-    if (photoPath) fs.unlinkSync(photoPath);
+
     res.status(500).json({ success: false, message: "Registration failed" });
   }
 };

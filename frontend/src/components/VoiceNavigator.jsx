@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { FaMicrophone } from "react-icons/fa";
 import "./VoiceNavigator.css";
 
-const VoiceNavigator = ({ onCommand }) => {
+const VoiceNavigator = ({ onCommand, onVote, onCapture, onVerifyVote }) => {
   const [listening, setListening] = useState(false);
   const recognition = useRef(null);
 
@@ -18,9 +18,27 @@ const VoiceNavigator = ({ onCommand }) => {
     recognition.current.interimResults = false;
 
     recognition.current.onresult = (event) => {
-      const transcript =
-        event.results[event.results.length - 1][0].transcript.trim();
-      if (onCommand) onCommand(transcript);
+      const transcript = event.results[event.results.length - 1][0].transcript
+        .trim()
+        .toLowerCase();
+
+      if (transcript.startsWith("vote ")) {
+        const partyName = transcript.slice("vote ".length).trim();
+        onVote && onVote(partyName);
+        onCommand && onCommand(transcript);
+      } else if (transcript.includes("capture photo")) {
+        onCapture && onCapture();
+        onCommand && onCommand(transcript);
+      } else if (
+        transcript.includes("verify and vote") ||
+        transcript.includes("verify & vote")
+      ) {
+        onVerifyVote && onVerifyVote();
+        onCommand && onCommand(transcript);
+      } else {
+        onCommand && onCommand(transcript);
+      }
+
       setListening(false);
       recognition.current.stop();
     };
@@ -37,7 +55,7 @@ const VoiceNavigator = ({ onCommand }) => {
     return () => {
       if (recognition.current) recognition.current.stop();
     };
-  }, [onCommand]);
+  }, [onCommand, onVote, onCapture, onVerifyVote]);
 
   const toggleListening = () => {
     if (listening) {
