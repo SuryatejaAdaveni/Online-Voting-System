@@ -2,12 +2,10 @@ const express = require("express");
 const router = express.Router();
 const {
   getElectionResults,
-  getHistoricalResults,
-  getRegionalResults,
+  publishElectionResults,
 } = require("../controllers/resultController");
 
 router.get("/", getElectionResults);
-router.get("/historical", getHistoricalResults);
-router.get("/regional", getRegionalResults);
+router.post("/publish", publishElectionResults); // New route for publishing results
 
 module.exports = router;

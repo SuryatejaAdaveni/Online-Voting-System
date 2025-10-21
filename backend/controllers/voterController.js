@@ -218,21 +218,21 @@ const handleRegister = async (req, res) => {
         .json({ success: false, message: "Aadhaar already registered" });
     }
 
-    // Upload photo to Cloudinary
+    // Upload photo to Cloudinary - now resolves full result object
     const uploadFromBuffer = (buffer) => {
       return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           { public_id: voterId, folder: "voters" },
           (error, result) => {
             if (error) return reject(error);
-            resolve(result.secure_url);
+            resolve(result);
           }
         );
         streamifier.createReadStream(buffer).pipe(uploadStream);
       });
     };
 
-    const photoUrl = await uploadFromBuffer(photoBuffer);
+    const photoResult = await uploadFromBuffer(photoBuffer);
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -247,7 +247,10 @@ const handleRegister = async (req, res) => {
       dob,
       aadhaar,
       mobile,
-      photo: photoUrl, // save Cloudinary URL here
+      photo: {
+        public_id: photoResult.public_id,
+        url: photoResult.secure_url,
+      },
     });
 
     res.status(201).json({
