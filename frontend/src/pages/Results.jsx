@@ -1,574 +1,735 @@
-import React, { useState, useEffect } from "react";
-import { Pie, Bar, Line } from "react-chartjs-2";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  Chart,
-  ArcElement,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-} from "chart.js";
-import {
-  FiDownload,
-  FiPrinter,
-  FiShare2,
-  FiBarChart2,
-  FiPieChart,
-  FiTrendingUp,
-} from "react-icons/fi";
-import { FaChevronDown, FaChevronUp } from "react-icons/fa";
+  FaVoteYea,
+  FaUser,
+  FaLock,
+  FaEnvelope,
+  FaEye,
+  FaEyeSlash,
+  FaCheckCircle,
+  FaUserShield,
+  FaVenusMars,
+  FaCalendarAlt,
+  FaMobileAlt,
+  FaCamera,
+  FaTimesCircle,
+  FaIdCard,
+  FaAsterisk,
+} from "react-icons/fa";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import "../styles/Register.css";
 import apiUrl from "../apiUrl";
-import "../styles/results.css";
 
-// Register chart elements
-Chart.register(
-  ArcElement,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title
-);
+export default function VotingRegister() {
+  const navigate = useNavigate();
 
-const electionInfo = {
-  title: "2025 BIHER Election",
-  subtitle: "Official Results - Final Count",
-  date: "2025-11-05",
-  status: "CERTIFIED",
-  totalVoters: 107000,
-  turnout: 78.5,
-  lastUpdated: "2025-11-06 08:30 AM EST",
-  electionType: "Educational",
-  region: "Chennai, India",
-  electionOfficer: "Vamshi Ambati",
-  contactEmail: "elections@metro.city.gov",
-};
-
-const chartModes = {
-  PIE: "pie",
-  HORIZONTAL: "horizontal",
-  LINE: "line",
-};
-
-const timePeriods = {
-  HOURLY: "hourly",
-  DAILY: "daily",
-  BY_REGION: "by_region",
-};
-
-// Utility to get the full party image URL
-const getPartyImgUrl = (partyImg) => {
-  if (!partyImg) return "";
-  if (/^https?:\/\//.test(partyImg)) return partyImg;
-  return `${apiUrl}${partyImg}`;
-};
-
-// Utility to generate a unique random color
-const generateRandomColor = () => {
-  const letters = "0123456789ABCDEF";
-  let color = "#";
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
-};
-
-const ElectionResults = () => {
-  const [results, setResults] = useState([]);
-  const [historicalData, setHistoricalData] = useState([]);
-  const [regionalData, setRegionalData] = useState([]);
-  const [hoveredCandidate, setHoveredCandidate] = useState(null);
-  const [chartMode, setChartMode] = useState(chartModes.HORIZONTAL);
-  const [timePeriod, setTimePeriod] = useState(timePeriods.DAILY);
-  const [loading, setLoading] = useState({
-    results: true,
-    historical: true,
-    regional: true,
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    voterId: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "voter",
+    gender: "",
+    dob: "",
+    aadhaar: "",
+    mobile: "",
+    pin: "",
   });
-  const [error, setError] = useState("");
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
-  const [totalVoters, setTotalVoters] = useState(0);
-  const [turnout, setTurnout] = useState(0);
 
-  // State to store unique colors for each party
-  const [partyColors, setPartyColors] = useState({});
+  const [uploadedPhoto, setUploadedPhoto] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [registerSuccess, setRegisterSuccess] = useState(false);
 
-  // Fetch results from backend
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading((prev) => ({ ...prev, results: true }));
-        setError("");
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  const [canVerifyEmail, setCanVerifyEmail] = useState(false);
 
-        const res = await fetch(`${apiUrl}/api/results`);
-        if (!res.ok) throw new Error("Failed to fetch results");
+  const [mobileVerificationSent, setMobileVerificationSent] = useState(false);
+  const [mobileVerificationCode, setMobileVerificationCode] = useState("");
+  const [mobileVerified, setMobileVerified] = useState(false);
+  const [isSendingMobileOTP, setIsSendingMobileOTP] = useState(false);
+  const [isVerifyingMobileOTP, setIsVerifyingMobileOTP] = useState(false);
+  const [canVerifyMobile, setCanVerifyMobile] = useState(false);
 
-        const data = await res.json();
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
 
-        if (!Array.isArray(data.results)) {
-          throw new Error("Invalid results format from backend");
-        }
+    if (name === "email") {
+      setEmailVerified(false);
+      setEmailVerificationSent(false);
+      setVerificationCode("");
+      setCanVerifyEmail(false);
+    }
 
-        const sortedResults = data.results.sort((a, b) => b.votes - a.votes);
-        const winningCandidateId = sortedResults[0]?.id;
-
-        const updatedResults = sortedResults.map((candidate) => ({
-          ...candidate,
-          status:
-            candidate.votes === 0
-              ? "Conceded"
-              : candidate.id === winningCandidateId
-              ? "Winner"
-              : "Trailing",
-        }));
-
-        setResults(updatedResults);
-        setTotalVoters(data.totalVoters);
-        setTurnout(data.turnout);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading((prev) => ({ ...prev, results: false }));
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Effect to assign a unique color to each party
-  useEffect(() => {
-    const newPartyColors = { ...partyColors };
-    results.forEach((result) => {
-      if (!newPartyColors[result.party]) {
-        newPartyColors[result.party] = generateRandomColor();
-      }
-    });
-    setPartyColors(newPartyColors);
-  }, [results]);
-
-  const winner = results.length > 0 ? results[0] : null;
-  const totalVotes = results.reduce((sum, r) => sum + (r.votes || 0), 0);
-  const maxVotes =
-    results.length > 0 ? Math.max(...results.map((r) => r.votes || 0)) : 0;
-
-  // Prepare data for charts using the assigned party colors
-  const chartLabels = results.map((r) => r.party);
-  const chartData = results.map((r) => r.votes);
-  const chartColors = results.map((r) => partyColors[r.party]);
-
-  const pieData = {
-    labels: chartLabels,
-    datasets: [
-      {
-        data: chartData,
-        backgroundColor: chartColors,
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const lineData = {
-    labels: historicalData.map((h) =>
-      new Date(h.timestamp).toLocaleTimeString()
-    ),
-    datasets: results.map((candidate) => ({
-      label: candidate.candidate,
-      data: historicalData.map(
-        (h) => h.candidates.find((c) => c.id === candidate.id)?.votes || 0
-      ),
-      borderColor: partyColors[candidate.party],
-      backgroundColor: partyColors[candidate.party] + "40",
-      tension: 0.1,
-      fill: true,
-    })),
-  };
-
-  const regionalBarData = {
-    labels: regionalData.map((r) => r.region),
-    datasets: results.map((candidate) => ({
-      label: candidate.candidate,
-      data: regionalData.map(
-        (r) => r.candidates.find((c) => c.id === candidate.id)?.votes || 0
-      ),
-      backgroundColor: partyColors[candidate.party] + "80",
-      borderColor: partyColors[candidate.party],
-      borderWidth: 1,
-    })),
-  };
-
-  const lineOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top",
-      },
-      title: {
-        display: true,
-        text: "Vote Progression Over Time",
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-      },
-    },
-  };
-
-  const regionalOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top",
-      },
-      title: {
-        display: true,
-        text: "Votes by Region",
-      },
-    },
-    scales: {
-      x: {
-        stacked: true,
-      },
-      y: {
-        stacked: true,
-        beginAtZero: true,
-      },
-    },
-  };
-
-  const downloadCSV = () => {
-    const timestamp = new Date().toISOString().split("T")[0];
-    const header = "Rank,Candidate,Party,Votes,Percentage,Status\n";
-    const rows = results
-      .map(
-        (r, index) =>
-          `${index + 1},"${r.candidate}","${r.party}",${r.votes},${
-            r.percentage
-          }%,${r.status}`
-      )
-      .join("\n");
-    const csvContent = "data:text/csv;charset=utf-8," + header + rows;
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `election_results_${timestamp}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const generateReport = () => {
-    const reportData = {
-      election: electionInfo,
-      results: results,
-      summary: {
-        totalVotes,
-        winner: winner ? winner.candidate : "",
-        winningMargin:
-          results.length > 1 && winner && results[1].percentage !== undefined
-            ? (winner.percentage - results[1].percentage).toFixed(1)
-            : "",
-      },
-    };
-
-    const jsonString = JSON.stringify(reportData, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `election_report_${
-      new Date().toISOString().split("T")[0]
-    }.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const printResults = () => {
-    window.print();
-  };
-
-  const shareResults = async () => {
-    try {
-      await navigator.share({
-        title: `${electionInfo.title} Results`,
-        text: `View the latest results for ${electionInfo.title}`,
-        url: window.location.href,
-      });
-    } catch (err) {
-      alert("Share functionality is not supported in your browser");
+    if (name === "mobile") {
+      setMobileVerified(false);
+      setMobileVerificationSent(false);
+      setMobileVerificationCode("");
+      setCanVerifyMobile(false);
     }
   };
 
-  const viewCandidateDetails = (candidate) => {
-    setSelectedCandidate(candidate);
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) setUploadedPhoto(file);
   };
 
-  const closeCandidateDetails = () => {
-    setSelectedCandidate(null);
+  const handleRemovePhoto = () => {
+    setUploadedPhoto(null);
+  };
+
+  const handleSendVerification = async () => {
+    if (!formData.email) {
+      toast.error("Enter a valid email to send verification");
+      return;
+    }
+    try {
+      setIsSendingVerification(true);
+      const res = await fetch(`${apiUrl}/voter/send-email-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(data.message || "Failed to send verification email");
+      toast.success("Verification email sent! Check your inbox.");
+      setEmailVerificationSent(true);
+      setCanVerifyEmail(true);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsSendingVerification(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!verificationCode.trim()) {
+      toast.error("Enter verification code");
+      return;
+    }
+    try {
+      setIsVerifyingEmail(true);
+      const res = await fetch(`${apiUrl}/voter/verify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, code: verificationCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Verification failed");
+      toast.success("Email verified!");
+      setEmailVerified(true);
+      setCanVerifyEmail(false);
+    } catch (err) {
+      toast.error(err.message);
+      setEmailVerified(false);
+    } finally {
+      setIsVerifyingEmail(false);
+    }
+  };
+
+  const handleSendMobileOTP = async () => {
+    if (!formData.mobile || !/^\d{10}$/.test(formData.mobile)) {
+      toast.error("Enter a valid 10-digit mobile number");
+      return;
+    }
+    try {
+      setIsSendingMobileOTP(true);
+      const res = await fetch(`${apiUrl}/voter/send-mobile-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile: formData.mobile }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to send mobile OTP");
+      toast.success("OTP sent to your mobile number.");
+      setMobileVerificationSent(true);
+      setCanVerifyMobile(true);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsSendingMobileOTP(false);
+    }
+  };
+
+  const handleVerifyMobileOTP = async () => {
+    if (!mobileVerificationCode.trim()) {
+      toast.error("Enter the OTP");
+      return;
+    }
+    try {
+      setIsVerifyingMobileOTP(true);
+      const res = await fetch(`${apiUrl}/voter/verify-mobile-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mobile: formData.mobile,
+          otp: mobileVerificationCode,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "OTP verification failed");
+      toast.success("Mobile number verified!");
+      setMobileVerified(true);
+      setCanVerifyMobile(false);
+    } catch (err) {
+      toast.error(err.message);
+      setMobileVerified(false);
+    } finally {
+      setIsVerifyingMobileOTP(false);
+    }
+  };
+
+  const validateForm = () => {
+    if (!uploadedPhoto) return "A photo is required for face verification.";
+    if (!formData.firstName.trim() || formData.firstName.length < 2)
+      return "Enter a valid first name";
+    if (!formData.lastName.trim() || formData.lastName.length < 2)
+      return "Enter a valid last name";
+    if (!formData.voterId.trim()) return "Voter ID is required";
+    if (
+      !formData.email.trim() ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+    )
+      return "Enter a valid email";
+    if (!formData.mobile.trim() || !/^\d{10}$/.test(formData.mobile))
+      return "Enter a valid 10-digit mobile number";
+    if (!formData.password || formData.password.length < 6)
+      return "Password must be at least 6 characters";
+    if (formData.password !== formData.confirmPassword)
+      return "Passwords do not match";
+    if (!formData.gender) return "Gender is required";
+    if (!formData.dob) return "Date of birth is required";
+    if (!formData.aadhaar.trim() || !/^\d{12}$/.test(formData.aadhaar))
+      return "Enter a valid 12-digit Aadhaar number";
+    if (formData.role === "admin" && formData.pin !== "vamshi")
+      return "Incorrect or missing Admin PIN";
+    return null;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const errorMessage = validateForm();
+    if (errorMessage) {
+      toast.error(errorMessage);
+      return;
+    }
+    if (!uploadedPhoto) {
+      toast.error("Please upload a photo");
+      return;
+    }
+    setIsLoading(true);
+
+    const data = new FormData();
+    for (const key in formData) {
+      if (key !== "confirmPassword") {
+        data.append(key, formData[key]);
+      }
+    }
+    data.append("photo", uploadedPhoto);
+
+    try {
+      const response = await fetch(`${apiUrl}/voter/register`, {
+        method: "POST",
+        body: data,
+      });
+      const responseData = await response.json();
+      if (!response.ok)
+        throw new Error(responseData.message || "Registration failed");
+      toast.success("Registration successful!");
+      setRegisterSuccess(true);
+      setTimeout(() => navigate("/login"), 4000);
+    } catch (error) {
+      toast.error(error.message || "Registration failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="election-container">
-      {/* Header Section */}
-      <header className="election-header">
-        <div className="header-content">
-          <div className="header-main">
-            <h1 className="election-title">{electionInfo.title}</h1>
-            <p className="election-subtitle">{electionInfo.subtitle}</p>
-            <div className="election-meta">
-              <span
-                className={`status-badge ${electionInfo.status.toLowerCase()}`}
-              >
-                {electionInfo.status}
-              </span>
-              <span className="precincts-info">{electionInfo.precincts}</span>
-              <span className="election-type">{electionInfo.electionType}</span>
-              <span className="election-region">{electionInfo.region}</span>
+    <div className="register-container">
+      <div className="register-wrapper">
+        <div className="register-card">
+          <div className="register-header">
+            <div className="vote-icon">
+              <FaVoteYea />
             </div>
-            <div className="election-stats">
-              <div className="stat-item">
-                <div className="stat-content">
-                  <span className="stat-label">Election Date</span>
-                  <span className="stat-value">
-                    {new Date(electionInfo.date).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-content">
-                  <span className="stat-label">Total Votes</span>
-                  <span className="stat-value">
-                    {totalVotes.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-content">
-                  <span className="stat-label">Voter Turnout</span>
-                  <span className="stat-value">{turnout}%</span>
-                </div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-content">
-                  <span className="stat-label">Registered Voters</span>
-                  <span className="stat-value">
-                    {totalVoters.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <h1 className="register-title">Secure Voting Portal</h1>
+            <p className="register-subtitle">Create your voting account</p>
           </div>
 
-          {/* Winner Card */}
-          {winner && (
-            <div className="winner-card">
-              <div className="winner-header">
-                <span className="winner-label">Projected Winner</span>
-              </div>
-              <div className="winner-content">
-                <img
-                  src={winner.partyImg}
-                  alt={winner.party}
-                  className="party-logo"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                  }}
-                />
-                <h3 className="winner-name">{winner.candidate}</h3>
-                <p className="winner-party">{winner.party}</p>
-                <div className="winner-stats">
-                  <span className="winner-percentage">
-                    {winner.percentage !== undefined
-                      ? winner.percentage + "%"
-                      : ""}
-                  </span>
-                  <span className="winner-votes">
-                    {winner.votes !== undefined
-                      ? winner.votes.toLocaleString() + " votes"
-                      : ""}
-                  </span>
+          <div className="register-form">
+            {registerSuccess ? (
+              <div className="success-message">
+                <div className="success-content">
+                  <FaCheckCircle className="success-icon" />
+                  <div>
+                    <p className="success-text">
+                      Registration successful! Redirecting to login...
+                    </p>
+                  </div>
                 </div>
-                <button
-                  className="view-details-btn"
-                  onClick={() => viewCandidateDetails(winner)}
-                >
-                  View Details
-                </button>
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              <form onSubmit={handleSubmit}>
+                {/* Photo Upload */}
+                <label className="form-label photo-upload-label-text">
+                  Profile Photo* (For Face Verification)
+                </label>
+                <div className="photo-upload-container">
+                  {!uploadedPhoto && (
+                    <label
+                      htmlFor="photo-upload-input"
+                      className="photo-upload-placeholder"
+                    >
+                      <FaCamera className="upload-icon" />
+                      <span className="upload-text">Upload Photo</span>
+                      <input
+                        type="file"
+                        id="photo-upload-input"
+                        className="photo-upload-input"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        required
+                      />
+                    </label>
+                  )}
+                  {uploadedPhoto && (
+                    <div className="photo-preview-container">
+                      <img
+                        src={URL.createObjectURL(uploadedPhoto)}
+                        alt="Uploaded Profile"
+                        className="photo-preview-image"
+                      />
+                      <button
+                        type="button"
+                        className="photo-remove-button"
+                        onClick={handleRemovePhoto}
+                        aria-label="Remove uploaded photo"
+                      >
+                        <FaTimesCircle />
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-        {/* Action Buttons */}
-        <div className="header-actions">
-          <div className="action-buttons">
-            <button className="action-btn" onClick={downloadCSV}>
-              <FiDownload /> Download CSV
-            </button>
-            <button className="action-btn" onClick={generateReport}>
-              <FiBarChart2 /> Full Report
-            </button>
-            <button className="action-btn" onClick={printResults}>
-              <FiPrinter /> Print
-            </button>
-            <button className="action-btn" onClick={shareResults}>
-              <FiShare2 /> Share
-            </button>
-            <button className="action-btn">Publish</button>
-          </div>
-        </div>
-      </header>
+                {/* Name and Voter ID row */}
+                <div className="form-row">
+                  <div className="form-field third-width">
+                    <label className="form-label">First Name*</label>
+                    <div className="input-with-icon">
+                      <FaUser className="input-icon" />
+                      <input
+                        type="text"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        placeholder="First name"
+                        required
+                      />
+                    </div>
+                  </div>
 
-      {/* Main Content (no toggle) */}
-      <main className="election-results">
-        {loading.results ? (
-          <div className="loading-state">
-            <div className="spinner"></div>
-            <p>Loading election results...</p>
-          </div>
-        ) : error ? (
-          <div className="error-state">
-            <p>Error: {error}</p>
-            <button onClick={() => window.location.reload()}>Retry</button>
-          </div>
-        ) : results.length === 0 ? (
-          <div className="empty-state">
-            <p>No candidates found for this election.</p>
-          </div>
-        ) : (
-          <>
-            {/* Chart Mode Toggle */}
-            <div className="chart-controls">
-              <div className="chart-mode-toggle">
-                <button
-                  className={`chart-mode-btn${
-                    chartMode === chartModes.HORIZONTAL ? " active" : ""
-                  }`}
-                  onClick={() => setChartMode(chartModes.HORIZONTAL)}
-                >
-                  <FiBarChart2 /> Horizontal
-                </button>
-                <button
-                  className={`chart-mode-btn${
-                    chartMode === chartModes.PIE ? " active" : ""
-                  }`}
-                  onClick={() => setChartMode(chartModes.PIE)}
-                >
-                  <FiPieChart /> Pie Chart
-                </button>
-                {historicalData.length > 0 && (
-                  <button
-                    className={`chart-mode-btn${
-                      chartMode === chartModes.LINE ? " active" : ""
-                    }`}
-                    onClick={() => setChartMode(chartModes.LINE)}
+                  <div className="form-field third-width">
+                    <label className="form-label">Last Name*</label>
+                    <div className="input-with-icon">
+                      <FaUser className="input-icon" />
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        placeholder="Last name"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-field third-width">
+                    <label className="form-label">Voter ID*</label>
+                    <div className="input-with-icon">
+                      <FaIdCard className="input-icon" />
+                      <input
+                        type="text"
+                        name="voterId"
+                        value={formData.voterId}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        placeholder="Voter ID"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gender, DOB, Aadhaar row */}
+                <div className="form-row">
+                  <div className="form-field third-width">
+                    <label className="form-label">Gender*</label>
+                    <div className="input-with-icon">
+                      <FaVenusMars className="input-icon" />
+                      <select
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        required
+                      >
+                        <option value="">Select gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                        <option value="prefer-not-to-say">
+                          Prefer not to say
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-field third-width">
+                    <label className="form-label">Date of Birth*</label>
+                    <div className="input-with-icon">
+                      <FaCalendarAlt className="input-icon" />
+                      <input
+                        type="date"
+                        name="dob"
+                        value={formData.dob}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-field third-width">
+                    <label className="form-label">Aadhaar Number*</label>
+                    <div className="input-with-icon">
+                      <FaAsterisk className="input-icon" />
+                      <input
+                        type="text"
+                        name="aadhaar"
+                        value={formData.aadhaar}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        placeholder="12-digit Aadhaar number"
+                        maxLength="12"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile number and OTP */}
+                <div className="form-row">
+                  <div className="form-field third-width">
+                    <label className="form-label">Mobile Number*</label>
+                    <div className="input-with-icon">
+                      <FaMobileAlt className="input-icon" />
+                      <input
+                        type="tel"
+                        name="mobile"
+                        value={formData.mobile}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        placeholder="10-digit mobile number"
+                        maxLength="10"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    className="form-field third-width"
+                    style={{ display: "flex", flexDirection: "column" }}
                   >
-                    <FiTrendingUp /> Trend
-                  </button>
-                )}
-              </div>
-            </div>
+                    <label className="form-label">Mobile OTP*</label>
+                    <input
+                      type="text"
+                      placeholder="Enter OTP"
+                      value={mobileVerificationCode}
+                      onChange={(e) =>
+                        setMobileVerificationCode(e.target.value)
+                      }
+                      disabled={mobileVerified || !canVerifyMobile}
+                      className="form-input"
+                      required
+                    />
+                  </div>
 
-            {/* Main Chart View */}
-            <div className="chart-section">
-              <div className="chart-container">
-                {chartMode === chartModes.PIE ? (
-                  <div className="pie-chart-wrapper">
-                    <Pie data={pieData} />
+                  <div
+                    className="form-field third-width"
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-end",
+                      gap: "8px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleSendMobileOTP}
+                      disabled={isSendingMobileOTP || mobileVerified}
+                      className="small-button"
+                      style={{ flex: "1" }}
+                    >
+                      {isSendingMobileOTP
+                        ? "Sending..."
+                        : mobileVerificationSent
+                        ? "Resend"
+                        : "Send OTP"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleVerifyMobileOTP}
+                      disabled={
+                        isVerifyingMobileOTP ||
+                        mobileVerified ||
+                        !canVerifyMobile
+                      }
+                      className="small-button verify-button"
+                      style={{ flex: "1" }}
+                    >
+                      {isVerifyingMobileOTP ? "Verifying..." : "Verify"}
+                    </button>
                   </div>
-                ) : chartMode === chartModes.LINE ? (
-                  <div className="line-chart-wrapper">
-                    <Line data={lineData} options={lineOptions} />
+                </div>
+
+                {/* Email and Verification */}
+                <div className="form-row">
+                  <div className="form-field third-width">
+                    <label className="form-label">Email*</label>
+                    <div className="input-with-icon">
+                      <FaEnvelope className="input-icon" />
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <div className="horizontal-chart">
-                    {results.map((result, index) => {
-                      const barWidth =
-                        maxVotes > 0 ? (result.votes / maxVotes) * 100 : 0;
-                      const isHovered = hoveredCandidate === result.id;
-                      // const partyColor = partyColors[result.party];
-                      return (
-                        <div
-                          className={`chart-row ${isHovered ? "hovered" : ""}`}
-                          key={result.id}
-                          onMouseEnter={() => setHoveredCandidate(result.id)}
-                          onMouseLeave={() => setHoveredCandidate(null)}
-                          onClick={() => viewCandidateDetails(result)}
+
+                  <div className="form-field third-width">
+                    <label className="form-label">Email Verification*</label>
+                    <input
+                      type="text"
+                      placeholder="Verification code"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      disabled={emailVerified || !canVerifyEmail}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div
+                    className="form-field third-width"
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "flex-end",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleSendVerification}
+                      disabled={isSendingVerification || emailVerified}
+                      className="small-button"
+                      style={{ flex: 1 }}
+                    >
+                      {isSendingVerification
+                        ? "Sending..."
+                        : emailVerificationSent
+                        ? "Resend"
+                        : "Send code"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleVerifyEmail}
+                      disabled={
+                        isVerifyingEmail || emailVerified || !canVerifyEmail
+                      }
+                      className="small-button verify-button"
+                      style={{ flex: 1 }}
+                    >
+                      {isVerifyingEmail ? "Verifying..." : "Verify"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div className="form-row">
+                  <div className="form-field third-width">
+                    <label className="form-label">Password*</label>
+                    <div className="input-with-icon">
+                      <FaLock className="input-icon" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        placeholder="Create password"
+                        required
+                      />
+                      <span
+                        className="password-toggle-icon"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="form-field third-width">
+                    <label className="form-label">Confirm Password*</label>
+                    <div className="input-with-icon">
+                      <FaLock className="input-icon" />
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        placeholder="Confirm your password"
+                        required
+                      />
+                      <span
+                        className="password-toggle-icon"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                      >
+                        {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Account type */}
+                <div className="form-field">
+                  <label className="form-label">Account Type*</label>
+                  <div className="register-role-selection">
+                    <div
+                      className={`role-option ${
+                        formData.role === "voter" ? "selected" : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        id="voter"
+                        name="role"
+                        value="voter"
+                        checked={formData.role === "voter"}
+                        onChange={handleInputChange}
+                        className="role-radio"
+                      />
+                      <label htmlFor="voter" className="role-label">
+                        <FaUser className="role-icon" />
+                        <span>Voter</span>
+                      </label>
+                    </div>
+                    <div
+                      className={`role-option ${
+                        formData.role === "admin" ? "selected" : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        id="admin"
+                        name="role"
+                        value="admin"
+                        checked={formData.role === "admin"}
+                        onChange={handleInputChange}
+                        className="role-radio"
+                      />
+                      <label htmlFor="admin" className="role-label">
+                        <FaUserShield className="role-icon" />
+                        <span>Administrator</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Admin PIN for admin role */}
+                {formData.role === "admin" && (
+                  <div className="form-row">
+                    <div className="form-field third-width">
+                      <label className="form-label">Admin PIN*</label>
+                      <div className="input-with-icon">
+                        <FaLock className="input-icon" />
+                        <input
+                          type={showPin ? "text" : "password"}
+                          name="pin"
+                          value={formData.pin}
+                          onChange={handleInputChange}
+                          className="form-input"
+                          placeholder="Enter admin PIN"
+                          required
+                        />
+                        <span
+                          className="password-toggle-icon"
+                          onClick={() => setShowPin(!showPin)}
+                          style={{ cursor: "pointer" }}
                         >
-                          <div className="row-rank">#{index + 1}</div>
-                          <div className="row-candidate">
-                            {/* <img
-                              src={result.partyImg}
-                              alt={result.party}
-                              height={32}
-                              width={32}
-                              className="party-logo"
-                              onError={(e) => {
-                                e.target.style.display = "none";
-                              }}
-                            /> */}
-                            <div className="candidate-info">
-                              <span className="candidate-name">
-                                {result.candidate}
-                              </span>
-                              <span className="candidate-party">
-                                {result.party}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="row-chart">
-                            <div
-                              className="chart-bar"
-                              style={{
-                                width: `${barWidth}%`,
-                                // backgroundColor: partyColor,
-                                backgroundColor: "#1e88e5",
-                              }}
-                            >
-                              <div className="bar-content">
-                                <span className="bar-votes">
-                                  {result.votes !== undefined
-                                    ? result.votes.toLocaleString()
-                                    : ""}
-                                </span>
-                                <span className="bar-percentage">
-                                  {result.percentage !== undefined
-                                    ? result.percentage + "%"
-                                    : ""}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="row-status">
-                            <span
-                              className={`status-indicator ${
-                                result.status ? result.status.toLowerCase() : ""
-                              }`}
-                            >
-                              {result.status}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          {showPin ? <FaEyeSlash /> : <FaEye />}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="register-submit-button"
+                >
+                  {isLoading ? (
+                    <div className="loading-content">
+                      <div className="loading-spinner"></div>
+                      Registering...
+                    </div>
+                  ) : (
+                    "Create Account"
+                  )}
+                </button>
+              </form>
+            )}
+            <div className="form-footer">
+              <p className="footer-text">
+                Already have an account?{" "}
+                <button
+                  className="register-link"
+                  onClick={() => navigate("/login")}
+                >
+                  Login
+                </button>
+              </p>
+              <p className="privacy-text">
+                By registering, you agree to our Terms of Service and Privacy
+                Policy
+              </p>
             </div>
-          </>
-        )}
-      </main>
+          </div>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default ElectionResults;
+}

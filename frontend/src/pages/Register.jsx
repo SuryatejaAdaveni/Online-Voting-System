@@ -228,10 +228,10 @@ export default function VotingRegister() {
       toast.error(errorMessage);
       return;
     }
-     if (!uploadedPhoto) {
-       toast.error("Please upload a photo");
-       return;
-     }
+    if (!uploadedPhoto) {
+      toast.error("Please upload a photo");
+      return;
+    }
     setIsLoading(true);
 
     const data = new FormData();

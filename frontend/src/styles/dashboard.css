@@ -2,10 +2,10 @@
    Online Voting Dashboard Styles
    ============================== */
 .voting-dashboard {
-  margin: 60px auto;
   min-height: 100vh;
   background-color: #f5f7fa;
   color: #333;
+  padding-top: 40px;
 }
 
 /* Header */

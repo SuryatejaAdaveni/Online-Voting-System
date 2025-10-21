@@ -112,11 +112,8 @@ const ProfilePage = () => {
 
     try {
       // Get user data from storage
-      const authToken =
-        localStorage.getItem("authToken")
-      const userData = JSON.parse(
-        localStorage.getItem("userData") 
-      );
+      const authToken = localStorage.getItem("authToken");
+      const userData = JSON.parse(localStorage.getItem("userData"));
 
       if (!userData?._id) {
         throw new Error("Session expired. Please log in again.");

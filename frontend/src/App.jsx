@@ -194,7 +194,7 @@ const App = () => {
         <Route path="/profile" element={<ProfilePage />} />
         {/* <Route path="*" element={<Error />} /> */}
       </Routes>
-      <Footer />
+      {/* <Footer /> */}
     </BrowserRouter>
   );
 };

@@ -28,7 +28,10 @@ def get_photo_url_from_db(voter_id):
         return None
     voter = voter_collection.find_one({"_id": oid})
     if voter and "photo" in voter:
-        return voter["photo"]
+        photo_info = voter["photo"]
+        if isinstance(photo_info, dict):
+            return photo_info.get("url")  # <- Only return the url string
+        return None
     return None
 
 
@@ -86,4 +89,4 @@ def verify_face():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

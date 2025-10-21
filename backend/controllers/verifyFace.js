@@ -8,11 +8,14 @@ const verifyFace = async (req, res) => {
     }
 
     // Call Python face verification microservice
-    const pythonResponse = await fetch("http://localhost:8000/face-verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ voterId, image }),
-    });
+    const pythonResponse = await fetch(
+      "http://localhost:5000/api/verify-face",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voterId, image }),
+      }
+    );
 
     const data = await pythonResponse.json();
 

@@ -35,7 +35,8 @@
   margin-top: 1rem;
 }
 
-.edit-button, .change-password-button {
+.edit-button,
+.change-password-button {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 4px;
@@ -94,7 +95,8 @@
   color: #333;
 }
 
-.profile-form, .password-form {
+.profile-form,
+.password-form {
   width: 100%;
 }
 
