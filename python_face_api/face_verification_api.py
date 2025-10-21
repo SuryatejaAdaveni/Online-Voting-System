@@ -15,7 +15,9 @@ app = Flask(__name__)
 CORS(app)
 
 # Connect to MongoDB (replace with your connection string)
-client = MongoClient("mongodb+srv://vamshiambati:venu9985@cluster0.edeyz18.mongodb.net/admin-panel?retryWrites=true&w=majority&appName=Cluster0")  # Or your cloud MongoDB URI
+import os
+mongodb_uri = os.getenv("MONGODB_URI")
+client = MongoClient(mongodb_uri)
 
 # Choose your DB and collection
 db = client["online-voting-system"]
